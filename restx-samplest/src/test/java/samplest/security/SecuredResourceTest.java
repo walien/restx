@@ -6,6 +6,7 @@ import com.google.common.hash.Hashing;
 import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Test;
+import restx.security.DefaultRestxSessionCookieCodec;
 import restx.security.HttpAuthenticationFilter;
 import restx.security.RestxSessionBareFilter;
 import restx.security.RestxSessionCookieFilter;
@@ -57,7 +58,11 @@ public class SecuredResourceTest {
     }
 
     private void assertResponseSetCookieContainsKeyAndValue(String responseSetCookieHeader, String key, String value) {
-        org.hamcrest.MatcherAssert.assertThat(responseSetCookieHeader, anyOf(
+        DefaultRestxSessionCookieCodec codec = new DefaultRestxSessionCookieCodec();
+        String sessionValue = responseSetCookieHeader
+                .replace("RestxSession=\"", "")
+                .replace("\";Path=/", "");
+        org.hamcrest.MatcherAssert.assertThat(codec.decode(sessionValue), anyOf(
                 // Depending on restx-server implementation, Set-Cookie may surround its cookie value with double quotes,
                 // thus surrounding key/value with backslash escapes
                 containsString(String.format("\"%s\":\"%s\"", key, value)),

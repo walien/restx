@@ -11,6 +11,7 @@ import com.google.common.collect.ImmutableMap;
 
 import restx.common.UUIDGenerator;
 import restx.factory.Factory;
+import restx.security.RestxSessionCookieCodec;
 import restx.security.RestxSessionCookieDescriptor;
 import restx.security.Signer;
 
@@ -43,6 +44,7 @@ public class HttpTestClient {
     public HttpTestClient authenticatedAs(String principal) {
         Factory factory = Factory.newInstance();
         RestxSessionCookieDescriptor restxSessionCookieDescriptor = factory.getComponent(RestxSessionCookieDescriptor.class);
+        RestxSessionCookieCodec restxSessionCookieCodec = factory.getComponent(RestxSessionCookieCodec.class);
         Signer signer = factory.queryByClass(Signer.class).findOneAsComponent().get();
 
         ImmutableMap.Builder<String, String> cookiesBuilder = ImmutableMap.<String, String>builder().putAll(cookies);
@@ -50,8 +52,9 @@ public class HttpTestClient {
         String expires = DateTime.now().plusHours(1).toString();
         String sessionContent = String.format(
                 "{\"_expires\":\"%s\",\"principal\":\"%s\",\"sessionKey\":\"%s\"}", expires, principal, uuid);
-        cookiesBuilder.put(restxSessionCookieDescriptor.getCookieName(), sessionContent);
-        cookiesBuilder.put(restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(sessionContent));
+        String encodedSessionContent = restxSessionCookieCodec.encode(sessionContent);
+        cookiesBuilder.put(restxSessionCookieDescriptor.getCookieName(), encodedSessionContent);
+        cookiesBuilder.put(restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(encodedSessionContent));
 
         return new HttpTestClient(baseUrl, principal, cookiesBuilder.build());
     }
