@@ -53,14 +53,16 @@ public class RestxSessionCookieFilter implements RestxRouteFilter, RestxHandler 
 	private final Signer signer;
     private final PermissionFactory permissionFactory;
     private final RestxSessionCookieDescriptor restxSessionCookieDescriptor;
+    private final RestxSessionCookieCodec restxSessionCookieCodec;
     private final RestxSession emptySession;
 
-	public RestxSessionCookieFilter(
+    public RestxSessionCookieFilter(
 			RestxSession.Definition sessionDefinition,
 			@Named(FrontObjectMapperFactory.MAPPER_NAME) ObjectMapper mapper,
 			@Named(COOKIE_SIGNER_NAME) Signer signer,
             PermissionFactory permissionFactory,
-			RestxSessionCookieDescriptor restxSessionCookieDescriptor) {
+			RestxSessionCookieDescriptor restxSessionCookieDescriptor,
+            RestxSessionCookieCodec restxSessionCookieCodec) {
 
 		this.sessionDefinition = sessionDefinition;
 		this.mapper = mapper;
@@ -69,7 +71,8 @@ public class RestxSessionCookieFilter implements RestxRouteFilter, RestxHandler 
         this.restxSessionCookieDescriptor = restxSessionCookieDescriptor;
 		this.emptySession = new RestxSession(sessionDefinition, ImmutableMap.<String, String>of(),
 				Optional.<RestxPrincipal>absent(), Duration.ZERO);
-	}
+        this.restxSessionCookieCodec = restxSessionCookieCodec;
+    }
 
     @Override
     public Optional<RestxHandlerMatch> match(RestxRoute route) {
@@ -115,7 +118,8 @@ public class RestxSessionCookieFilter implements RestxRouteFilter, RestxHandler 
 				logger.warn("invalid restx session signature. session was: {}. Ignoring session cookie.", cookie);
                 return emptySession;
             }
-            Map<String, String> entries = readEntries(cookie);
+            String decodedCookie = restxSessionCookieCodec.decode(cookie);
+            Map<String, String> entries = readEntries(decodedCookie);
             DateTime expires = DateTime.parse(entries.remove(EXPIRES));
             if (expires.isBeforeNow()) {
                 return emptySession;
@@ -174,8 +178,9 @@ public class RestxSessionCookieFilter implements RestxRouteFilter, RestxHandler 
                 HashMap<String,String> map = Maps.newHashMap(sessionMap);
                 map.put(EXPIRES, DateTime.now().plusDays(30).toString());
                 String sessionJson = mapper.writeValueAsString(map);
-                return ImmutableMap.of(restxSessionCookieDescriptor.getCookieName(), sessionJson,
-						restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(sessionJson));
+                String encodedSessionJson = restxSessionCookieCodec.encode(sessionJson);
+                return ImmutableMap.of(restxSessionCookieDescriptor.getCookieName(), encodedSessionJson,
+						restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(encodedSessionJson));
 			}
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
