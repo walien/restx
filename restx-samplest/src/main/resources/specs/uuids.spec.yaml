@@ -5,6 +5,6 @@ given:
 wts:
   - when: |
        GET uuids/random
-       Cookie: RestxSession={"_expires":"2014-01-23T14:59:51.329+01:00","principal":"admin","sessionKey":"631078a2-85e8-4593-bc34-82a75a492d05"}; RestxSessionSignature=QhH7jf5v9GXBQ23bv3OIPBYQU8E=
+        $RestxSession: {"_expires":"2014-01-23T14:59:51.329+01:00","principal":"admin","sessionKey":"631078a2-85e8-4593-bc34-82a75a492d05"}
     then: |
         c81ed8c6-dc40-47c5-ae29-93a375f7b77c

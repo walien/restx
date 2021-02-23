@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import restx.factory.Component;
+import restx.security.RestxSessionCookieCodec;
 import restx.security.RestxSessionCookieDescriptor;
 import restx.security.Signer;
 
@@ -16,10 +17,14 @@ public class WhenRestxSessionHeaderLoader implements RestxSpecLoader.WhenHeaderL
     private static final Logger logger = LoggerFactory.getLogger(WhenRestxSessionHeaderLoader.class);
 
     private final RestxSessionCookieDescriptor restxSessionCookieDescriptor;
+    private final RestxSessionCookieCodec restxSessionCookieCodec;
     private final Signer signer;
 
-    public WhenRestxSessionHeaderLoader(RestxSessionCookieDescriptor restxSessionCookieDescriptor, Signer signer) {
+    public WhenRestxSessionHeaderLoader(RestxSessionCookieDescriptor restxSessionCookieDescriptor,
+                                        RestxSessionCookieCodec restxSessionCookieCodec,
+                                        Signer signer) {
         this.restxSessionCookieDescriptor = restxSessionCookieDescriptor;
+        this.restxSessionCookieCodec = restxSessionCookieCodec;
         this.signer = signer;
     }
 
@@ -37,7 +42,8 @@ public class WhenRestxSessionHeaderLoader implements RestxSpecLoader.WhenHeaderL
             logger.warn("Restx session cookie will be overwritten by {} special header !", detectionPattern());
         }
 
-        whenHttpRequestBuilder.addCookie(restxSessionCookieDescriptor.getCookieName(), sessionContent);
-        whenHttpRequestBuilder.addCookie(restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(sessionContent));
+        String encodedSession = restxSessionCookieCodec.encode(sessionContent);
+        whenHttpRequestBuilder.addCookie(restxSessionCookieDescriptor.getCookieName(), encodedSession);
+        whenHttpRequestBuilder.addCookie(restxSessionCookieDescriptor.getCookieSignatureName(), signer.sign(encodedSession));
     }
 }
